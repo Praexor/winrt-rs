@@ -35,7 +35,7 @@ impl Delegate {
         let phantoms = self.name.phantoms();
         let constraints = self.name.gen_constraint();
         let method = self.method.gen_default();
-        let abi_method = self.method.gen_abi(&self.name);
+        let abi_method = self.method.gen_abi_signature(&self.name);
 
         let guid = self.name.gen_guid(&self.guid);
 
@@ -110,7 +110,7 @@ impl Delegate {
             #[repr(C)]
             pub struct #abi_definition where #constraints {
                 pub unknown: ::winrt::abi_IUnknown,
-                #abi_method
+                pub invoke: unsafe extern "system" fn #abi_method,
                 #phantoms
             }
             unsafe impl<#constraints> ::winrt::RuntimeType for #name {

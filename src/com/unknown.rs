@@ -41,3 +41,21 @@ pub struct abi_IUnknown {
     pub add_ref: extern "system" fn(NonNullRawComPtr<IUnknown>) -> u32,
     pub release: extern "system" fn(NonNullRawComPtr<IUnknown>) -> u32,
 }
+
+impl abi_IUnknown {
+    pub fn new(
+        query_interface: unsafe extern "system" fn(
+            NonNullRawComPtr<IUnknown>,
+            &Guid,
+            *mut RawPtr,
+        ) -> ErrorCode,
+        add_ref: extern "system" fn(NonNullRawComPtr<IUnknown>) -> u32,
+        release: extern "system" fn(NonNullRawComPtr<IUnknown>) -> u32,
+    ) -> Self {
+        Self {
+            query_interface,
+            add_ref,
+            release,
+        }
+    }
+}

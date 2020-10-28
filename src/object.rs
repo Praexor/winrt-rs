@@ -20,7 +20,7 @@ impl Object {
         let mut string = HString::default();
 
         unsafe {
-            (this.vtable().inspectable_type_name)(this, string.set_abi()).ok()?;
+            (this.vtable().type_name)(this, string.set_abi()).ok()?;
         }
 
         Ok(string)
@@ -60,16 +60,42 @@ unsafe impl AbiTransferable for Object {
 #[repr(C)]
 pub struct abi_IInspectable {
     pub unknown: abi_IUnknown,
-
-    // TODO: remove inspectable_ preamble as it's not longer needed
-    pub inspectable_iids:
+    pub iids:
         unsafe extern "system" fn(NonNullRawComPtr<Object>, *mut u32, *mut *mut Guid) -> ErrorCode,
-    pub inspectable_type_name: unsafe extern "system" fn(
+    pub type_name: unsafe extern "system" fn(
         NonNullRawComPtr<Object>,
         *mut <HString as AbiTransferable>::Abi,
     ) -> ErrorCode,
-    pub inspectable_trust_level:
-        unsafe extern "system" fn(NonNullRawComPtr<Object>, *mut i32) -> ErrorCode,
+    pub trust_level: unsafe extern "system" fn(NonNullRawComPtr<Object>, *mut i32) -> ErrorCode,
+}
+
+impl abi_IInspectable {
+    pub fn new(
+        query_interface: unsafe extern "system" fn(
+            NonNullRawComPtr<IUnknown>,
+            &Guid,
+            *mut RawPtr,
+        ) -> ErrorCode,
+        add_ref: extern "system" fn(NonNullRawComPtr<IUnknown>) -> u32,
+        release: extern "system" fn(NonNullRawComPtr<IUnknown>) -> u32,
+        iids: unsafe extern "system" fn(
+            NonNullRawComPtr<Object>,
+            *mut u32,
+            *mut *mut Guid,
+        ) -> ErrorCode,
+        type_name: unsafe extern "system" fn(
+            NonNullRawComPtr<Object>,
+            *mut <HString as AbiTransferable>::Abi,
+        ) -> ErrorCode,
+        trust_level: unsafe extern "system" fn(NonNullRawComPtr<Object>, *mut i32) -> ErrorCode,
+    ) -> Self {
+        Self {
+            unknown: abi_IUnknown::new(query_interface, add_ref, release),
+            iids,
+            type_name,
+            trust_level,
+        }
+    }
 }
 
 macro_rules! primitive_boxed_type {

@@ -1,5 +1,5 @@
 use crate::*;
-use squote::{quote, TokenStream};
+use squote::{ quote, TokenStream};
 use std::collections::*;
 use std::iter::FromIterator;
 
@@ -58,8 +58,8 @@ impl RequiredInterface {
         }
     }
 
-    pub fn gen_abi_method(&self) -> TokenStream {
-        TokenStream::from_iter(self.methods.iter().map(|method| method.gen_abi(&self.name)))
+    pub fn gen_abi_signatures(&self) -> Vec<(&str, TokenStream)> {
+        self.methods.iter().map(|method| (method.name.as_str(), method.gen_abi_signature(&self.name))).collect()
     }
 
     pub fn gen_conversions(&self, from: &TokenStream, constraints: &TokenStream) -> TokenStream {

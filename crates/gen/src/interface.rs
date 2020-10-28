@@ -76,11 +76,25 @@ impl Interface {
                 .map(|interface| interface.gen_conversions(&name, &constraints)),
         );
 
-        let methods = gen_method(&self.interfaces);
-        let abi_methods = default_interface.gen_abi_method();
         let iterator = gen_iterator(&self.name, &self.interfaces);
         let (async_get, future) = gen_async(&self.name, &self.interfaces);
         let debug = gen_debug(&self.name, &self.interfaces);
+        let methods = gen_method(&self.interfaces);
+        let abi_signatures = default_interface.gen_abi_signatures();
+
+        let abi_names = abi_signatures.iter().map(|(name, _)| {
+            format_ident(name)
+       });
+
+        let abi_signatures = abi_signatures.iter().map(|(name, signature)| {
+            let name = format_ident(name);
+
+            quote! {
+                #name: unsafe extern "system" fn #signature
+            }
+        });
+
+        let abi_signatures2 = abi_signatures.clone();
 
         quote! {
             #[repr(transparent)]
@@ -100,8 +114,28 @@ impl Interface {
             #[repr(C)]
             pub struct #abi_definition where #constraints {
                 pub inspectable: ::winrt::abi_IInspectable,
-                #abi_methods
+                #(pub #abi_signatures,)*
                 #phantoms
+            }
+            impl<#constraints> #abi_definition {
+                pub fn new(
+                    query_interface: unsafe extern "system" fn(::winrt::NonNullRawComPtr<::winrt::IUnknown>, &::winrt::Guid, *mut ::winrt::RawPtr) -> ::winrt::ErrorCode,
+                    add_ref: extern "system" fn(::winrt::NonNullRawComPtr<::winrt::IUnknown>) -> u32,
+                    release: extern "system" fn(::winrt::NonNullRawComPtr<::winrt::IUnknown>) -> u32,
+                    iids: unsafe extern "system" fn(::winrt::NonNullRawComPtr<::winrt::Object>,*mut u32,*mut *mut ::winrt::Guid) -> ::winrt::ErrorCode,
+                    type_name: unsafe extern "system" fn(::winrt::NonNullRawComPtr<::winrt::Object>, *mut <::winrt::HString as ::winrt::AbiTransferable>::Abi) -> ::winrt::ErrorCode,
+                    trust_level: unsafe extern "system" fn(::winrt::NonNullRawComPtr<::winrt::Object>, *mut i32) -> ::winrt::ErrorCode,
+                    #(#abi_signatures2,)*
+                ) -> Self {
+
+                        inspectable: ::winrt::abi_IInspectable::new(query_interface, 
+                        add_ref, 
+                        release,
+                        iids,
+                        type_name,
+                        trust_level),
+                        #(#abi_names,)*
+                }
             }
             unsafe impl<#constraints> ::winrt::RuntimeType for #name {
                 const SIGNATURE: ::winrt::ConstBuffer = { #signature };

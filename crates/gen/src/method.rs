@@ -1,5 +1,5 @@
 use crate::*;
-use squote::{quote, TokenStream};
+use squote::{ quote, TokenStream};
 use std::iter::FromIterator;
 
 #[derive(Debug)]
@@ -113,21 +113,36 @@ impl Method {
         to_snake(method.name(reader), MethodKind::Normal)
     }
 
-    pub fn gen_abi(&self, self_name: &TypeName) -> TokenStream {
+    // pub fn gen_abi(&self, self_name: &TypeName) -> TokenStream {
+    //     let type_name = self_name.gen();
+    //     let name = format_ident(&self.name);
+    //     let params = TokenStream::from_iter(
+    //         self.params
+    //             .iter()
+    //             .chain(self.return_type.iter())
+    //             .map(|param| param.gen_abi()),
+    //     );
+
+    //     quote! {
+    //         pub #name: unsafe extern "system" fn(::winrt::NonNullRawComPtr<#type_name>, #params) -> ::winrt::ErrorCode,
+    //     }
+    // }
+
+    pub fn gen_abi_signature(&self, self_name: &TypeName) -> TokenStream {
         let type_name = self_name.gen();
-        let name = format_ident(&self.name);
-        let params = TokenStream::from_iter(
+
+        let params = 
             self.params
                 .iter()
                 .chain(self.return_type.iter())
-                .map(|param| param.gen_abi()),
-        );
+                .map(|param| param.gen_abi());
 
         quote! {
-            pub #name: unsafe extern "system" fn(::winrt::NonNullRawComPtr<#type_name>, #params) -> ::winrt::ErrorCode,
+            (::winrt::NonNullRawComPtr<#type_name>, #(#params)*) -> ::winrt::ErrorCode
         }
     }
 
+    // tODO: remove this as its redundant
     pub fn gen_abi_impl(&self, self_name: &TypeName) -> TokenStream {
         let type_name = self_name.gen();
         let name = format_ident(&self.name);
@@ -136,7 +151,7 @@ impl Method {
             .iter()
             .chain(self.return_type.iter())
             .map(|param| {
-                let abi = param.gen_abi();
+                let abi = param.gen_abi(); // why wrap this?
                 quote! { #abi }
             });
 
@@ -145,6 +160,7 @@ impl Method {
         }
     }
 
+    // tODO: remove this as its redundant
     pub fn gen_binding_abi_impl(&self, self_name: &TypeName) -> TokenStream {
         let type_name = self_name.gen_binding();
         let name = format_ident(&self.name);
@@ -153,7 +169,7 @@ impl Method {
             .iter()
             .chain(self.return_type.iter())
             .map(|param| {
-                let abi = param.gen_abi();
+                let abi = param.gen_abi(); // why wrap this?
                 quote! { #abi }
             });
 
